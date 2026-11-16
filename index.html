@@ -55,6 +55,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .book .new{flex:1;color:var(--accent);font-weight:600}
 .book .more{width:34px;height:28px;margin-right:-8px;color:var(--muted);font-size:15px;letter-spacing:1px}
 .empty{text-align:center;color:var(--muted);margin:16vh auto 0;max-width:380px;line-height:1.55}
+.ver{text-align:center;color:var(--muted);font-size:12px;margin-top:48px;opacity:.7}
 .empty b{display:block;color:var(--fg);font:600 23px/1.3 ui-serif,Georgia,serif;margin-bottom:8px}
 
 /* ---------- Reader ---------- */
@@ -79,7 +80,10 @@ html.pen #hudTop{visibility:hidden}
 #inkBar svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 #inkBar .sep{width:1px;height:22px;background:var(--line);margin:0 4px}
 #inkBar .danger{color:#e5484d}
-#penBtn.on{color:var(--accent);background:var(--chip)}
+#inkBar #inkDone{width:auto;padding:0 12px;font-weight:600;font-size:15px;color:var(--accent)}
+#inkBar{max-width:calc(100vw - 12px);overflow-x:auto}
+#inkBar button{flex:none}
+#penBtn.on,#reflowBtn.on{color:var(--accent);background:var(--chip)}
 #loadMsg{margin-top:14px;color:var(--muted);font-size:14px;text-align:center}
 #loading>div{display:flex;flex-direction:column;align-items:center}
 #epubView{top:calc(var(--st) + 22px);bottom:calc(var(--sb) + 18px)}
@@ -182,6 +186,7 @@ html.inv #pageView canvas{filter:invert(.9) hue-rotate(180deg)}
   </div>
   <div id="grid" class="grid"></div>
   <div id="empty" class="empty hidden"><b>Your shelf is empty</b>Tap <strong>Add</strong> to import EPUB, PDF, CBZ, FB2, TXT or HTML files from the Files app. Books are stored on this device and open offline.</div>
+  <div class="ver">Shelf 1.1</div>
   <input type="file" id="fileInput" multiple hidden>
 </div>
 
@@ -196,6 +201,8 @@ html.inv #pageView canvas{filter:invert(.9) hue-rotate(180deg)}
   <div id="hudTop" class="hud"></div>
   <div id="hudBottom" class="hud"></div>
   <div id="inkBar">
+    <button id="inkPrev" aria-label="Previous page"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <span class="sep"></span>
     <button class="dot" data-tool="ink" style="--c:var(--fg)" aria-label="Pen"></button>
     <button class="dot" data-tool="red" style="--c:#d93a3a" aria-label="Red pen"></button>
     <button class="dot" data-tool="blue" style="--c:#2f6fdb" aria-label="Blue pen"></button>
@@ -206,11 +213,15 @@ html.inv #pageView canvas{filter:invert(.9) hue-rotate(180deg)}
     <button id="inkUndo" aria-label="Undo"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/></svg></button>
     <button id="inkFinger" aria-label="Draw with finger"><svg viewBox="0 0 24 24"><path d="M8 13V5.5a1.5 1.5 0 013 0V11m0-1.5V4a1.5 1.5 0 013 0v7m0-4.5a1.5 1.5 0 013 0V14a6 6 0 01-6 6h-.6a6 6 0 01-5-2.7L4 13.6a1.5 1.5 0 012.4-1.8L8 14"/></svg></button>
     <button id="inkClear" aria-label="Clear notes on this page"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>
+    <span class="sep"></span>
+    <button id="inkNext" aria-label="Next page"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+    <button id="inkDone" aria-label="Stop writing">Done</button>
   </div>
   <div id="loading" class="hidden"><div><div class="spin"></div><div id="loadMsg"></div></div></div>
   <div class="bar-top">
     <button class="icon-btn" id="backBtn" aria-label="Back to library"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
     <div class="ttl" id="barTitle"></div>
+    <button class="icon-btn hidden" id="reflowBtn" aria-label="Reflow PDF text"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 11h16M4 16h9"/><path d="M16 15l3 3-3 3"/><path d="M19 18h-4"/></svg></button>
     <button class="icon-btn" id="penBtn" aria-label="Pencil notes"><svg viewBox="0 0 24 24"><path d="M4 20l1-4.5L16.5 4a2.1 2.1 0 013 3L8 18.5z"/><path d="M14.5 6l3 3"/></svg></button>
     <button class="icon-btn" id="tocBtn" aria-label="Contents"><svg viewBox="0 0 24 24"><path d="M9 6h12M9 12h12M9 18h12"/><path d="M4 6h.01M4 12h.01M4 18h.01" stroke-width="3"/></svg></button>
     <button class="icon-btn aa" id="setBtn" aria-label="Appearance">Aa</button>
@@ -503,7 +514,8 @@ function gestureEnd(dx, dy, dt, x) {
 function attachGestures(target, frameOf) {
   let sx = 0, sy = 0, st = 0, active = false;
   target.addEventListener('pointerdown', e => {
-    if (e.pointerType === 'pen' && !S.pen) { Ink.setPen(true); toast('Apple Pencil detected — writing is on. Tap the pencil icon to turn it off.'); }
+    // The touch that switches writing on must not also count as a tap or swipe, or the page turns under the Pencil.
+    if (e.pointerType === 'pen' && !S.pen) { Ink.setPen(true); toast('Apple Pencil detected — writing is on. Tap the pencil icon to turn it off.'); active = false; return; }
     if (!e.isPrimary || e.button > 0) return; active = true; sx = e.clientX; sy = e.clientY; st = Date.now();
   }, {passive:true});
   target.addEventListener('pointercancel', () => { active = false; }, {passive:true});
@@ -640,6 +652,7 @@ class TextEngine {
     this.style();
     await Promise.all(Array.from(this.cols.querySelectorAll('img')).map(i => i.decode ? i.decode().catch(() => {}) : null));
     this.layout();
+    this.srcPage = (pos && pos.page) || 0;
     let start = 0;
     if (pos && pos.block != null) start = pos.block;
     else if (pos && pos.page) { const i = this.blocks.findIndex(b => +b.dataset.p >= pos.page); start = i < 0 ? this.blocks.length - 1 : i; }
@@ -683,7 +696,13 @@ class TextEngine {
     this.nextBlock = this.page < this.pages - 1 ? this.blockAt(this.page + 1) : this.blocks.length;
     const frac = this.page >= this.pages - 1 ? 1 : this.cum[this.block] / this.total;
     const pos = {block: this.block}, b = this.blocks[this.block];
-    if (b && b.dataset.p) pos.page = +b.dataset.p;
+    if (b && b.dataset.p) {
+      // A reflowed page usually spans two source pages. Keep reporting the one we came from while it is
+      // still on screen, so switching between reflowed text and original pages does not drift backwards.
+      const last = this.blocks[Math.max(this.block, this.nextBlock - 1)];
+      const lo = +b.dataset.p, hi = Math.max(lo, +(last && last.dataset.p) || lo);
+      pos.page = this.srcPage = clamp(this.srcPage || lo, lo, hi);
+    }
     Reader.onLoc({fraction: frac, tocIndex: ti, label: 'Page ' + (this.page + 1) + ' of ' + this.pages, pos});
   }
   inkFrame() {
@@ -964,6 +983,9 @@ const Ink = {
       const b = e.target.closest('button'); if (!b) return;
       if (b.dataset.tool) { S.inkTool = b.dataset.tool; saveS(); this.syncBar(); }
       else if (b.id === 'inkUndo') this.undo();
+      else if (b.id === 'inkPrev') Reader.prev();
+      else if (b.id === 'inkNext') Reader.next();
+      else if (b.id === 'inkDone') { this.setPen(false); toast('Pencil notes off — your notes stay on the page'); }
       else if (b.id === 'inkFinger') { this.finger = !this.finger; this.syncBar(); toast(this.finger ? 'Finger draws now — tap the hand again to turn pages with your finger' : 'Finger turns pages again'); }
       else if (b.id === 'inkClear') {
         if (!b.classList.contains('danger')) { b.classList.add('danger'); setTimeout(() => b.classList.remove('danger'), 2500); toast('Tap again to clear notes on this page'); return; }
@@ -1109,18 +1131,20 @@ const Ink = {
   },
   // Finger gestures while the canvas is active: page turns, scrolling a zoomed PDF, following links.
   gDown(e) {
-    if (!e.isPrimary || (e.width && e.width > 40) || Date.now() - this.lastPen < 1200) { this.g = null; return; }
+    if (!e.isPrimary || this.pid != null || Date.now() - this.lastPen < 700) { this.g = null; return; }
     this.g = {id: e.pointerId, sx: e.clientX, sy: e.clientY, ly: e.clientY, t: Date.now()};
   },
   gMove(e) {
     const g = this.g; if (!g || g.id !== e.pointerId) return;
+    // A palm resting while the Pencil writes must not scroll the page out from under the stroke.
+    if (this.pid != null || Date.now() - this.lastPen < 500) { g.ly = e.clientY; return; }
     const pv = $('#pageView');
     if (!pv.classList.contains('hidden') && pv.scrollHeight > pv.clientHeight) pv.scrollTop -= e.clientY - g.ly;
     g.ly = e.clientY;
   },
   gUp(e) {
     const g = this.g; this.g = null;
-    if (!g || g.id !== e.pointerId || Date.now() - this.lastPen < 800) return;
+    if (!g || g.id !== e.pointerId || this.pid != null || Date.now() - this.lastPen < 500) return;
     const dx = e.clientX - g.sx, dy = e.clientY - g.sy;
     if (Math.abs(dx) < 12 && Math.abs(dy) < 12 && this.followLink(e.clientX, e.clientY)) return;
     gestureEnd(dx, dy, Date.now() - g.t, e.clientX);
@@ -1154,6 +1178,7 @@ const Reader = {
     await Ink.load(id); Ink.clearCanvas();
     document.querySelectorAll('.pane').forEach(p => p.classList.add('hidden'));
     const [E, pane] = forceEngine || engineFor(rec);
+    $('#reflowBtn').classList.toggle('hidden', rec.format !== 'pdf'); $('#reflowBtn').classList.toggle('on', E === PdfTextEngine);
     $(pane).classList.remove('hidden');
     this.engine = new E();
     try { await this.engine.open(rec, file.data); }
@@ -1412,7 +1437,8 @@ const Library = {
       if (a.dataset.a === 'open') return Reader.open(id);
       if (a.dataset.a === 'reset') { b.progress = 0; b.pos = null; b.opened = 0; await DB.put('books', b); }
       if (a.dataset.a === 'delete') {
-        await DB.del('books', id); await DB.del('files', id); await DB.del('locs', id).catch(() => {});
+        await DB.del('books', id); await DB.del('files', id);
+        for (const [s, k] of [['locs', id], ['locs', id + ':pdftext1'], ['ink', id]]) await DB.del(s, k).catch(() => {});
         if (coverURLs.has(id)) { URL.revokeObjectURL(coverURLs.get(id)); coverURLs.delete(id); }
         toast('Removed');
       }
@@ -1428,7 +1454,8 @@ function init() {
     const w = document.getElementById('pdfw');
     if (w) pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(new Blob([w.textContent], {type: 'text/javascript'}));
   }
-  applyTheme(); buildSettings(); Ink.init(); Ink.setPen(!!S.pen); applyNoteMargin();
+  applyTheme(); buildSettings(); Ink.init(); Ink.setPen(false); applyNoteMargin();
+  $('#reflowBtn').onclick = () => { const t = S.pdfMode !== 'text'; toast(t ? 'Reflowed text — tap the same button for original pages' : 'Original pages'); setSetting('pdfMode', t ? 'text' : 'page'); };
   $('#penBtn').onclick = () => { Ink.setPen(!S.pen); Reader.setUI(false); toast(S.pen ? 'Pencil writes, finger turns pages' : 'Pencil notes off'); };
   $('#addBtn').onclick = () => $('#fileInput').click();
   $('#fileInput').onchange = e => { const f = e.target.files; importFiles(f).finally(() => { e.target.value = ''; }); };
@@ -1456,6 +1483,8 @@ function init() {
   $('#setBody').onchange = e => { if (e.target.dataset.k) setSetting(e.target.dataset.k, e.target.checked); };
   const sl = $('#slider');
   sl.addEventListener('pointerdown', () => { Reader.dragging = true; });
+  // A tap that does not move the thumb fires no change event, which left the slider frozen.
+  for (const t of ['pointerup', 'pointercancel']) sl.addEventListener(t, () => { Reader.dragging = false; });
   sl.addEventListener('input', () => { $('#botRight').textContent = Math.round(sl.value / 10) + '%'; });
   sl.addEventListener('change', () => { Reader.dragging = false; Reader.engine && Reader.engine.goFraction(sl.value / 1000); });
   attachGestures($('#stage'));
