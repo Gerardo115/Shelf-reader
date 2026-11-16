@@ -983,6 +983,15 @@ const Ink = {
     cv.addEventListener('pointerup', e => this.up(e));
     cv.addEventListener('pointercancel', e => this.up(e, true));
     cv.addEventListener('contextmenu', e => e.preventDefault());
+    // iPadOS holds back the start of a Pencil stroke while it decides whether the touch is Scribble handwriting,
+    // a long press or a selection. With quick strokes that hold-back shows as ink that starts late or is cut short.
+    // Claiming the touch here ends the wait, so the pointer events arrive straight away.
+    const claim = e => {
+      if (!e.cancelable) return;
+      for (const t of e.changedTouches) if (t.touchType === 'stylus' || this.finger) { e.preventDefault(); return; }
+    };
+    cv.addEventListener('touchstart', claim, {passive: false});
+    cv.addEventListener('touchmove', claim, {passive: false});
     $('#inkBar').addEventListener('click', e => {
       const b = e.target.closest('button'); if (!b) return;
       if (b.dataset.tool) { S.inkTool = b.dataset.tool; saveS(); this.syncBar(); }
@@ -1009,7 +1018,7 @@ const Ink = {
   save() {
     clearTimeout(this.saveT);
     this.pending = {id: this.id, notes: this.notes};
-    this.saveT = setTimeout(() => this.flush(), 400);
+    this.saveT = setTimeout(() => this.pid != null ? this.save() : this.flush(), 1000);
   },
   flush() {
     clearTimeout(this.saveT);
@@ -1045,10 +1054,19 @@ const Ink = {
     const c = this.lctx; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, this.lv.width, this.lv.height);
     if (!this.cur || !this.frame) return;
     c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0); this.draw(this.cur, this.frame, c);
+    this.liveI = this.cur.p.length;
   },
-  draw(s, f, c) {
+  // Ink the points that have just arrived, at once and without repainting the rest of the stroke. Waiting for the
+  // next frame and redrawing the whole stroke each time made the line trail the Pencil, more so the longer it got.
+  liveAdd() {
+    const s = this.cur; if (!s || !this.frame) return;
+    if (s.c === 'hl') return this.scheduleLive();   // see-through ink has to be painted in one piece
+    const c = this.lctx; c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    this.draw(s, this.frame, c, this.liveI); this.liveI = s.p.length;
+  },
+  draw(s, f, c, from) {
     c = c || this.ctx;
-    const P = s.p, W = f.width; if (!P.length) return;
+    const P = s.p, W = f.width; if (!P.length || from >= P.length) return;
     const X = i => f.left + P[i] * W, Y = i => f.top + P[i + 1] * W;
     c.strokeStyle = c.fillStyle = s.c === 'ink' ? THEMES[S.theme].fg : (INK_COLORS[s.c] || s.c);
     c.lineCap = 'round'; c.lineJoin = 'round';
@@ -1060,8 +1078,10 @@ const Ink = {
       c.stroke(); c.globalAlpha = 1; return;
     }
     if (P.length === 3) { c.beginPath(); c.arc(X(0), Y(0), s.w * W * (0.4 + P[2]) / 2 + 0.5, 0, 7); c.fill(); return; }
+    const i0 = from > 3 ? from : 3;
     let px = X(0), py = Y(0);
-    for (let i = 3; i < P.length; i += 3) {
+    if (i0 > 3) { px = (X(i0 - 6) + X(i0 - 3)) / 2; py = (Y(i0 - 6) + Y(i0 - 3)) / 2; }
+    for (let i = i0; i < P.length; i += 3) {
       const mx = (X(i - 3) + X(i)) / 2, my = (Y(i - 3) + Y(i)) / 2;
       c.lineWidth = Math.max(0.6, s.w * W * (0.35 + P[i + 2] * 1.3));
       c.beginPath(); c.moveTo(px, py); c.quadraticCurveTo(X(i - 3), Y(i - 3), mx, my); c.stroke();
@@ -1080,21 +1100,22 @@ const Ink = {
   down(e) {
     if (e.pointerType === 'pen') this.lastPen = Date.now();
     if (!this.draws(e)) return this.gDown(e);
-    if (this.pid != null) return;
+    // A Pencil stroke whose lift was never reported must not block the next one.
+    if (this.pid != null) { if (e.pointerType !== 'pen') return; this.up({pointerId: this.pid, pointerType: 'pen'}); }
     e.preventDefault();
     if (!this.frame) this.redraw();
     if (!this.frame) return;
     try { this.cv.setPointerCapture(e.pointerId); } catch (err) {}
     this.pid = e.pointerId;
     if (S.inkTool === 'erase') { this.erasing = true; this.eraseAt(e); return; }
-    this.cur = {c: S.inkTool, w: S.inkTool === 'hl' ? 0.026 : 0.0032, p: []};
-    this.addPoint(e); this.scheduleLive();
+    this.cur = {c: S.inkTool, w: S.inkTool === 'hl' ? 0.026 : 0.0032, p: []}; this.liveI = 0;
+    this.addPoint(e); this.liveAdd();
   },
   move(e) {
     if (e.pointerId !== this.pid) return this.gMove(e);
     if (e.pointerType === 'pen') this.lastPen = Date.now();
     if (this.erasing) return this.eraseAt(e);
-    if (this.cur) { this.addPoint(e); this.scheduleLive(); }
+    if (this.cur) { this.addPoint(e); this.liveAdd(); }
   },
   up(e, cancelled) {
     if (e.pointerId !== this.pid) return cancelled ? (this.g = null) : this.gUp(e);
