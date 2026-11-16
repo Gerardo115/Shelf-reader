@@ -69,6 +69,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 #noteArea.l{left:0;width:var(--nl);border-right:1px solid var(--line)}
 #inkCanvas{position:absolute;left:0;top:0;z-index:3;pointer-events:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 html.pen #inkCanvas{pointer-events:auto;touch-action:none}
+#inkLive{position:absolute;left:0;top:0;z-index:3;pointer-events:none}
 #inkBar{position:absolute;top:calc(var(--st) + 6px);left:50%;transform:translateX(-50%);z-index:4;display:none;align-items:center;gap:2px;padding:4px 6px;border-radius:24px;background:var(--sheet);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);box-shadow:0 2px 14px rgba(0,0,0,.18);border:1px solid var(--line)}
 html.pen #inkBar{display:flex}
 html.pen #hudTop{visibility:hidden}
@@ -186,7 +187,7 @@ html.inv #pageView canvas{filter:invert(.9) hue-rotate(180deg)}
   </div>
   <div id="grid" class="grid"></div>
   <div id="empty" class="empty hidden"><b>Your shelf is empty</b>Tap <strong>Add</strong> to import EPUB, PDF, CBZ, FB2, TXT or HTML files from the Files app. Books are stored on this device and open offline.</div>
-  <div class="ver">Shelf 1.1</div>
+  <div class="ver">Shelf 1.2</div>
   <input type="file" id="fileInput" multiple hidden>
 </div>
 
@@ -970,9 +971,12 @@ function engineFor(rec) {
 /* ================= Pencil ink ================= */
 const INK_COLORS = {red: '#d93a3a', blue: '#2f6fdb', green: '#2e9d57', hl: '#ffd400'};
 const Ink = {
-  notes: [], id: null, cur: null, pid: null, undoStack: [], lastPen: 0, finger: false, frame: null, raf: 0, g: null,
+  notes: [], id: null, cur: null, pid: null, undoStack: [], lastPen: 0, finger: false, frame: null, raf: 0, lraf: 0, g: null,
   init() {
     this.cv = $('#inkCanvas'); this.ctx = this.cv.getContext('2d');
+    // The stroke being written gets its own layer on top. Each pencil movement then repaints that one stroke
+    // instead of every note on the page, which made writing fall behind once a page had a lot of ink on it.
+    this.lv = document.createElement('canvas'); this.lv.id = 'inkLive'; this.cv.after(this.lv); this.lctx = this.lv.getContext('2d');
     const cv = this.cv;
     cv.addEventListener('pointerdown', e => this.down(e));
     cv.addEventListener('pointermove', e => this.move(e));
@@ -1018,12 +1022,11 @@ const Ink = {
     document.querySelectorAll('#inkBar [data-tool]').forEach(b => b.classList.toggle('on', b.dataset.tool === S.inkTool));
     $('#inkFinger').classList.toggle('on', this.finger);
   },
-  clearCanvas() { this.ctx.setTransform(1, 0, 0, 1, 0, 0); this.ctx.clearRect(0, 0, this.cv.width, this.cv.height); },
+  clearCanvas() { for (const c of [this.ctx, this.lctx]) { c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, c.canvas.width, c.canvas.height); } },
   refresh() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2), w = innerWidth, h = innerHeight;
     if (this.cv.width !== Math.round(w * dpr) || this.cv.height !== Math.round(h * dpr)) {
-      this.cv.width = Math.round(w * dpr); this.cv.height = Math.round(h * dpr);
-      this.cv.style.width = w + 'px'; this.cv.style.height = h + 'px';
+      for (const c of [this.cv, this.lv]) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); c.style.width = w + 'px'; c.style.height = h + 'px'; }
     }
     this.dpr = dpr; this.redraw();
   },
@@ -1035,10 +1038,17 @@ const Ink = {
     if (!f) return;
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     for (const n of this.notes) if (f.match(n.a)) for (const s of n.s) this.draw(s, f);
-    if (this.cur) this.draw(this.cur, f);
+    this.drawLive();
   },
-  draw(s, f) {
-    const P = s.p, c = this.ctx, W = f.width; if (!P.length) return;
+  scheduleLive() { if (!this.lraf) this.lraf = requestAnimationFrame(() => { this.lraf = 0; this.drawLive(); }); },
+  drawLive() {
+    const c = this.lctx; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, this.lv.width, this.lv.height);
+    if (!this.cur || !this.frame) return;
+    c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0); this.draw(this.cur, this.frame, c);
+  },
+  draw(s, f, c) {
+    c = c || this.ctx;
+    const P = s.p, W = f.width; if (!P.length) return;
     const X = i => f.left + P[i] * W, Y = i => f.top + P[i + 1] * W;
     c.strokeStyle = c.fillStyle = s.c === 'ink' ? THEMES[S.theme].fg : (INK_COLORS[s.c] || s.c);
     c.lineCap = 'round'; c.lineJoin = 'round';
@@ -1078,13 +1088,13 @@ const Ink = {
     this.pid = e.pointerId;
     if (S.inkTool === 'erase') { this.erasing = true; this.eraseAt(e); return; }
     this.cur = {c: S.inkTool, w: S.inkTool === 'hl' ? 0.026 : 0.0032, p: []};
-    this.addPoint(e); this.schedule();
+    this.addPoint(e); this.scheduleLive();
   },
   move(e) {
     if (e.pointerId !== this.pid) return this.gMove(e);
     if (e.pointerType === 'pen') this.lastPen = Date.now();
     if (this.erasing) return this.eraseAt(e);
-    if (this.cur) { this.addPoint(e); this.schedule(); }
+    if (this.cur) { this.addPoint(e); this.scheduleLive(); }
   },
   up(e, cancelled) {
     if (e.pointerId !== this.pid) return cancelled ? (this.g = null) : this.gUp(e);
@@ -1096,8 +1106,10 @@ const Ink = {
       let n = this.notes.find(x => x.a === this.frame.anchor);
       if (!n) { n = {a: this.frame.anchor, s: []}; this.notes.push(n); }
       n.s.push(s); this.undoStack.push({t: 'add', n, s}); this.save();
+      // Add the finished stroke to the page layer as it is; nothing else on the page has changed.
+      this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0); this.draw(s, this.frame);
     }
-    this.schedule();
+    this.drawLive();
   },
   eraseAt(e) {
     const f = this.frame; if (!f) return;
@@ -1163,12 +1175,22 @@ const Ink = {
 
 /* ================= Reader controller ================= */
 const Reader = {
-  engine: null, rec: null, ui: false, loc: null, dragging: false,
+  engine: null, rec: null, ui: false, loc: null, dragging: false, openTok: 0, opening: Promise.resolve(), ready: false, relDue: null,
   loadMsg(t) { $('#loadMsg').textContent = t || ''; },
-  async open(id, forceEngine) {
+  // Opens run one at a time and only the latest request is carried out. Two overlapping opens (a second tap on a
+  // cover or on the reflow button while a large file is still being read) used to build two engines on the same
+  // page elements, leaving the reader attached to content that was no longer on screen.
+  open(id, forceEngine) {
+    const tok = ++this.openTok, run = () => this.openNow(id, forceEngine, tok);
+    return this.opening = this.opening.then(run, run);
+  },
+  async openNow(id, forceEngine, tok) {
+    if (tok !== this.openTok) return;
+    clearTimeout(this.relT); this.ready = false; this.relDue = null;
     if (this.engine) { try { this.engine.destroy(); } catch (e) {} this.engine = null; }
     const rec = await DB.get('books', id);
     const file = await DB.get('files', id);
+    if (tok !== this.openTok) return;
     if (!rec || !file) { toast('Book file is missing'); return; }
     this.rec = rec; this.loc = null;
     $('#library').classList.add('hidden'); $('#reader').classList.remove('hidden');
@@ -1187,18 +1209,20 @@ const Reader = {
       if (E === PdfTextEngine) {
         toast(err.message === 'NO_TEXT' ? 'This PDF has no text layer (probably scanned) — showing pages instead' : 'Text extraction failed — showing pages instead');
         $('#loading').classList.add('hidden');
-        return this.open(id, [PdfEngine, '#pageView']);
+        return this.openNow(id, [PdfEngine, '#pageView'], tok);
       }
       toast('Could not open: ' + (err && err.message || err)); this.close(); return;
     }
     finally { $('#loading').classList.add('hidden'); }
     rec.opened = Date.now(); this.save();
+    this.ready = true;
+    if (this.relDue) { const k = this.relDue; this.relDue = null; this.settingsChanged(k); }
     Ink.refresh();
   },
   async reopen() {
-    if (!this.rec) return;
-    clearTimeout(this.saveT); await DB.put('books', this.rec).catch(() => {});
-    this.open(this.rec.id);
+    const rec = this.rec; if (!rec) return;
+    clearTimeout(this.saveT); await DB.put('books', rec).catch(() => {});
+    if (this.rec && this.rec.id === rec.id) this.open(rec.id);
   },
   onLoc(info) {
     if (!this.rec) return;
@@ -1216,6 +1240,7 @@ const Reader = {
   },
   save() { if (this.rec) DB.put('books', this.rec).catch(() => {}); },
   close() {
+    this.openTok++; this.ready = false; clearTimeout(this.relT);
     clearTimeout(this.saveT); this.save(); closeSheets(); this.setUI(false);
     try { this.engine && this.engine.destroy(); } catch (e) {}
     this.engine = null; this.rec = null; Ink.unload();
@@ -1233,6 +1258,8 @@ const Reader = {
   settingsChanged(key) {
     if (!this.engine) return;
     clearTimeout(this.relT); this.relT = setTimeout(() => {
+      // A book that is still loading has nothing to lay out yet, and doing it early reset the reading position.
+      if (!this.ready) { this.relDue = key; return; }
       try { this.engine && this.engine.relayout(key); } catch (e) { console.error(e); }
       Ink.refresh();
     }, key === 'resize' ? 250 : 180);
