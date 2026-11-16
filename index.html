@@ -140,26 +140,50 @@ html.inv #pageView canvas{filter:invert(.9) hue-rotate(180deg)}
 .toc a.l3{padding-left:36px;font-size:14px;color:var(--muted)}
 .toc a.cur{color:var(--accent);font-weight:600}
 .toc .none{color:var(--muted);padding:20px 0}
-.row{padding:13px 0;border-bottom:1px solid var(--line)}
-.row:last-child{border-bottom:0}
-.k{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:9px}
-.seg{display:flex;background:var(--chip);border-radius:10px;padding:3px}
-.seg button{flex:1;height:34px;border-radius:8px;font-size:14px}
-.seg button.on{background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.18);font-weight:600}
-.swatches{display:flex;gap:16px}
-.sw{width:46px;height:46px;border-radius:50%;border:1px solid rgba(128,128,128,.35);font:600 16px ui-serif,Georgia,serif}
-.sw.on{outline:2.5px solid var(--accent);outline-offset:3px}
-.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
-.chip{flex:none;height:36px;padding:0 14px;border-radius:18px;background:var(--chip);font-size:15px;white-space:nowrap}
-.chip.on{background:var(--accent);color:#fff}
-.stepper{display:flex;align-items:center;gap:12px}
-.stepper .pill{flex:1;font-family:ui-serif,Georgia,serif}
-.stepper span{min-width:56px;text-align:center;font-variant-numeric:tabular-nums;font-weight:600}
-.tg{display:flex;justify-content:space-between;align-items:center;gap:12px}
-.switch{-webkit-appearance:none;appearance:none;width:51px;height:31px;border-radius:16px;background:var(--chip);position:relative;transition:background .2s;flex:none;margin:0;cursor:pointer;border:1px solid var(--line)}
-.switch::after{content:"";position:absolute;top:2px;left:2px;width:25px;height:25px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .2s}
-.switch:checked{background:#34c759}
-.switch:checked::after{transform:translateX(20px)}
+/* ---------- Appearance panel ---------- */
+.backdrop.clear{background:rgba(0,0,0,.06)}
+#setSheet{width:min(400px,calc(100% - 20px));bottom:calc(var(--sb) + 10px);max-height:min(82vh,660px);padding-bottom:0;border-radius:22px;border:1px solid var(--line);box-shadow:0 14px 50px rgba(0,0,0,.3);transform:translate(-50%,calc(100% + var(--sb) + 40px))}
+#setSheet.on{transform:translate(-50%,0)}
+@media (min-width:700px){
+  #setSheet{left:auto;right:calc(var(--sr) + 12px);top:calc(var(--st) + 68px);bottom:auto;max-height:calc(100vh - var(--st) - var(--sb) - 88px);transform:translateY(-10px) scale(.96);transform-origin:top right;opacity:0;transition:transform .18s ease,opacity .18s ease,visibility .18s}
+  #setSheet.on{transform:none;opacity:1}
+}
+.ap-tabs{display:flex;align-items:stretch;gap:20px;padding:6px 10px 0 20px;border-bottom:1px solid var(--line);flex:none}
+.ap-tabs [data-tab]{padding:12px 0 10px;font:600 17px/1.2 ui-serif,"New York","Iowan Old Style",Georgia,serif;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.ap-tabs [data-tab].on{color:var(--fg);border-bottom-color:var(--accent)}
+.ap-tabs .x{margin-left:auto;width:40px;display:grid;place-items:center;color:var(--muted)}
+.ap-tabs .x svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round}
+#setBody{padding:16px 20px 20px}
+#setBody section{display:none}
+#setBody[data-tab=text] section[data-tab=text],#setBody[data-tab=page] section[data-tab=page],#setBody[data-tab=pdf] section[data-tab=pdf]{display:block}
+#setBody[data-tab=pdf] #apPrev{display:none}
+#apPrev{height:108px;overflow:hidden;border-radius:12px;border:1px solid var(--line);margin-bottom:18px;-webkit-hyphens:auto;hyphens:auto;transition:background .2s,color .2s,padding .2s}
+.ap-sec{margin-bottom:18px}
+.ap-sec:last-child{margin-bottom:0}
+.ap-l{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:8px}
+.ap-l b{color:var(--fg);font-variant-numeric:tabular-nums}
+.ap-size{display:flex;align-items:center;gap:6px}
+.ap-size button{width:36px;height:36px;flex:none;font-family:ui-serif,Georgia,serif;font-weight:600;color:var(--muted)}
+.ap-size input{flex:1;min-width:0;margin:0;height:28px;accent-color:var(--accent)}
+.ap-opts,.ap-themes,.ap-fonts{display:grid;gap:8px}
+.ap-opts{grid-auto-flow:column;grid-auto-columns:1fr}
+.ap-opts+.ap-opts{margin-top:8px}
+.ap-themes,.ap-fonts{grid-template-columns:repeat(4,1fr)}
+.ap-opt,.ap-font,.ap-theme{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-width:0;border-radius:12px;border:1.5px solid var(--line);font-size:11.5px;color:var(--muted);transition:border-color .15s,color .15s}
+.ap-opt,.ap-font{height:62px;padding:0 4px}
+.ap-opt span,.ap-font span,.ap-theme span{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ap-opt svg,.ap-font svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.ap-font b{font-size:21px;line-height:24px;font-weight:500;color:var(--fg)}
+.ap-opt.on,.ap-font.on,.ap-theme.on{border-color:var(--accent);color:var(--accent);font-weight:600}
+.ap-font.on b{color:var(--accent)}
+.ap-theme{padding:5px 5px 6px}
+.ap-theme i{display:block;width:100%;height:44px;border-radius:7px;border:1px solid rgba(128,128,128,.3);background:linear-gradient(var(--tf),var(--tf)) 9px 11px/62% 2px no-repeat,linear-gradient(var(--tf),var(--tf)) 9px 20px/74% 2px no-repeat,linear-gradient(var(--tf),var(--tf)) 9px 29px/48% 2px no-repeat,var(--tb)}
+.ap-tg{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:15px;margin-bottom:18px;cursor:pointer}
+.ap-tg:last-child{margin-bottom:0}
+.switch{-webkit-appearance:none;appearance:none;width:44px;height:26px;border-radius:13px;background:var(--chip);position:relative;transition:background .2s;flex:none;margin:0;cursor:pointer;border:1px solid var(--line)}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .2s}
+.switch:checked{background:var(--accent);border-color:transparent}
+.switch:checked::after{transform:translateX(18px)}
 .act{display:block;width:100%;text-align:left;padding:15px 0;border-bottom:1px solid var(--line);font-size:16px}
 .act.danger{color:#e5484d}
 .act:last-child{border-bottom:0}
@@ -187,7 +211,7 @@ html.inv #pageView canvas{filter:invert(.9) hue-rotate(180deg)}
   </div>
   <div id="grid" class="grid"></div>
   <div id="empty" class="empty hidden"><b>Your shelf is empty</b>Tap <strong>Add</strong> to import EPUB, PDF, CBZ, FB2, TXT or HTML files from the Files app. Books are stored on this device and open offline.</div>
-  <div class="ver">Shelf 1.2</div>
+  <div class="ver">Shelf 1.3</div>
   <input type="file" id="fileInput" multiple hidden>
 </div>
 
@@ -235,7 +259,7 @@ html.inv #pageView canvas{filter:invert(.9) hue-rotate(180deg)}
 
 <div id="backdrop" class="backdrop"></div>
 <div id="tocSheet" class="sheet"><h3>Contents <button class="x">Done</button></h3><div class="body toc" id="tocList"></div></div>
-<div id="setSheet" class="sheet"><h3>Appearance <button class="x">Done</button></h3><div class="body" id="setBody"></div></div>
+<div id="setSheet" class="sheet" role="dialog" aria-label="Appearance"><div class="ap-tabs" id="setTabs"><button data-tab="text">Text</button><button data-tab="page">Layout</button><button data-tab="pdf">PDF &amp; comics</button><button class="x" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div class="body" id="setBody"></div></div>
 <div id="actSheet" class="sheet"><h3><span id="actTitle"></span><button class="x">Close</button></h3><div class="body" id="actBody"></div></div>
 <div id="toast"></div>
 
@@ -1288,7 +1312,7 @@ const Reader = {
 };
 
 /* ================= Sheets ================= */
-function openSheet(id) { closeSheets(); $('#' + id).classList.add('on'); $('#backdrop').classList.add('on'); }
+function openSheet(id) { closeSheets(); $('#' + id).classList.add('on'); const b = $('#backdrop'); b.classList.add('on'); b.classList.toggle('clear', id === 'setSheet'); }
 function closeSheets() { document.querySelectorAll('.sheet.on').forEach(s => s.classList.remove('on')); $('#backdrop').classList.remove('on'); }
 
 function openToc() {
@@ -1301,27 +1325,62 @@ function openToc() {
   const c = $('#tocList .cur'); if (c) c.scrollIntoView({block: 'center'});
 }
 
-const seg = (k, opts) => '<div class="seg">' + opts.map(o => '<button data-k="' + k + '" data-v="' + o[0] + '">' + o[1] + '</button>').join('') + '</div>';
+const ICO = {
+  book:'M12 6.5C10.2 5.2 7.6 4.8 4 5v13c3.6-.2 6.2.2 8 1.5 1.8-1.3 4.4-1.7 8-1.5V5c-3.6-.2-6.2.2-8 1.5zM12 6.5v13',
+  tight:'M5 7h14M5 10.3h14M5 13.7h14M5 17h14', normal:'M5 6.5h14M5 12h14M5 17.5h14', loose:'M5 5.5h14M5 18.5h14',
+  ms:'M5 3.5h14v17H5zM7 8h10M7 12h10M7 16h10', mm:'M5 3.5h14v17H5zM8.5 8h7M8.5 12h7M8.5 16h7', ml:'M5 3.5h14v17H5zM10 8h4M10 12h4M10 16h4',
+  left:'M4 6h16M4 10.5h10M4 15h14M4 19.5h8', justify:'M4 6h16M4 10.5h16M4 15h16M4 19.5h16',
+  n0:'M6 3.5h12v17H6zM9 8h6M9 12h6M9 16h6', n1:'M3.5 4.5h17v15h-17zM15.5 4.5v15M6 9h7M6 12h7M6 15h7', n2:'M3.5 4.5h17v15h-17zM11.5 4.5v15M6 9h3M6 12h3M6 15h3',
+  nl:'M3.5 4.5h17v15h-17zM8.5 4.5v15M11 9h7M11 12h7M11 15h7',
+  pages:'M6 3.5h8l4 4v13H6zM14 3.5v4h4', flow:'M4 6h16M4 10.5h16M4 15h16M4 19.5h9',
+  fitp:'M3.5 3.5h17v17h-17zM8.5 6.5h7v11h-7z', fitw:'M3.5 3.5h17v17h-17zM6 20.5V7h12v13.5'
+};
+const ico = n => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + ICO[n] + '"/></svg>';
+const apSec = (label, inner) => '<div class="ap-sec"><div class="ap-l">' + label + '</div>' + inner + '</div>';
+const apOpts = (k, opts) => '<div class="ap-opts">' + opts.map(o => '<button class="ap-opt" data-k="' + k + '" data-v="' + o[0] + '">' + ico(o[2]) + '<span>' + o[1] + '</span></button>').join('') + '</div>';
+const apToggle = (k, label) => '<label class="ap-tg"><span>' + label + '</span><input type="checkbox" class="switch" data-k="' + k + '"></label>';
+const PREVIEW_FONT = 'ui-serif,"Iowan Old Style",Georgia,serif';
 function buildSettings() {
   $('#setBody').innerHTML =
-    '<div class="row"><span class="k">Theme</span><div class="swatches">' + Object.keys(THEMES).map(t => '<button class="sw" data-k="theme" data-v="' + t + '" style="background:' + THEMES[t].bg + ';color:' + THEMES[t].fg + '" aria-label="' + t + '">Aa</button>').join('') + '</div></div>' +
-    '<div class="row"><span class="k">Text size</span><div class="stepper"><button class="pill" data-step="-10" style="font-size:14px">A</button><span id="sizeVal"></span><button class="pill" data-step="10" style="font-size:21px">A</button></div></div>' +
-    '<div class="row"><span class="k">Font</span><div class="chips">' + FONTS.map(f => '<button class="chip" data-k="font" data-v="' + f.id + '" style="font-family:' + esc(f.css || 'inherit') + '">' + f.name + '</button>').join('') + '</div></div>' +
-    '<div class="row"><span class="k">Line spacing</span>' + seg('lh', [['default', 'Book'], ['tight', 'Tight'], ['normal', 'Normal'], ['loose', 'Loose']]) + '</div>' +
-    '<div class="row"><span class="k">Margins</span>' + seg('margin', [['s', 'Narrow'], ['m', 'Medium'], ['l', 'Wide']]) + '</div>' +
-    '<div class="row"><span class="k">Alignment</span>' + seg('align', [['default', 'Book'], ['left', 'Left'], ['justify', 'Justify']]) + '</div>' +
-    '<div class="row tg"><span>Two pages in landscape</span><input type="checkbox" class="switch" data-k="spread"></div>' +
-    '<div class="row"><span class="k">Note margin (Apple Pencil)</span>' + seg('noteMargin', [['off', 'Off'], ['small', 'Small'], ['large', 'Large']]) +
-      '<div style="height:8px"></div>' + seg('noteSide', [['left', 'Left side'], ['right', 'Right side']]) + '</div>' +
-    '<div class="row"><span class="k">PDF view</span>' + seg('pdfMode', [['page', 'Original pages'], ['text', 'Reflowed text']]) + '</div>' +
-    '<div class="row"><span class="k">PDF &amp; comic fit</span>' + seg('pdfFit', [['page', 'Whole page'], ['width', 'Fit width']]) + '</div>' +
-    '<div class="row tg"><span>Dark PDFs in dark themes</span><input type="checkbox" class="switch" data-k="invert"></div>';
+    '<div id="apPrev" aria-hidden="true">The lamp had burned low by the time she reached the last chapter, and still she read on, one page and then another, while the rain kept time against the glass.</div>' +
+    '<section data-tab="text">' +
+      apSec('Theme', '<div class="ap-themes">' + Object.keys(THEMES).map(t => '<button class="ap-theme" data-k="theme" data-v="' + t + '" style="--tb:' + THEMES[t].bg + ';--tf:' + THEMES[t].fg + '"><i></i><span>' + t[0].toUpperCase() + t.slice(1) + '</span></button>').join('') + '</div>') +
+      apSec('Text size <b id="sizeVal"></b>', '<div class="ap-size"><button data-step="-10" style="font-size:14px" aria-label="Smaller">A</button><input type="range" id="sizeRange" min="60" max="250" step="5" aria-label="Text size"><button data-step="10" style="font-size:22px" aria-label="Larger">A</button></div>') +
+      apSec('Font', '<div class="ap-fonts">' + FONTS.map(f => '<button class="ap-font" data-k="font" data-v="' + f.id + '">' + (f.css ? '<b style="font-family:' + esc(f.css) + '">Ag</b>' : ico('book')) + '<span>' + f.name + '</span></button>').join('') + '</div>') +
+    '</section>' +
+    '<section data-tab="page">' +
+      apSec('Line spacing', apOpts('lh', [['default', 'Book', 'book'], ['tight', 'Tight', 'tight'], ['normal', 'Normal', 'normal'], ['loose', 'Loose', 'loose']])) +
+      apSec('Margins', apOpts('margin', [['s', 'Narrow', 'ms'], ['m', 'Medium', 'mm'], ['l', 'Wide', 'ml']])) +
+      apSec('Alignment', apOpts('align', [['default', 'Book', 'book'], ['left', 'Left', 'left'], ['justify', 'Justify', 'justify']])) +
+      apToggle('spread', 'Two pages in landscape') +
+      apSec('Note margin (Apple Pencil)', apOpts('noteMargin', [['off', 'Off', 'n0'], ['small', 'Small', 'n1'], ['large', 'Large', 'n2']]) +
+        apOpts('noteSide', [['left', 'Left side', 'nl'], ['right', 'Right side', 'n1']])) +
+    '</section>' +
+    '<section data-tab="pdf">' +
+      apSec('PDF view', apOpts('pdfMode', [['page', 'Original pages', 'pages'], ['text', 'Reflowed text', 'flow']])) +
+      apSec('PDF &amp; comic fit', apOpts('pdfFit', [['page', 'Whole page', 'fitp'], ['width', 'Fit width', 'fitw']])) +
+      apToggle('invert', 'Dark PDFs in dark themes') +
+    '</section>';
+  setTab('text');
   syncSettings();
+}
+function setTab(t) {
+  $('#setBody').dataset.tab = t; $('#setBody').scrollTop = 0;
+  document.querySelectorAll('#setTabs [data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+}
+function syncPreview(size) {
+  const p = $('#apPrev').style, t = THEMES[S.theme];
+  p.background = t.bg; p.color = t.fg; p.fontFamily = fontCss() || PREVIEW_FONT;
+  p.fontSize = (16 * size / 100) + 'px'; p.lineHeight = LH[S.lh] || 1.5;
+  p.textAlign = S.align === 'default' ? '' : S.align;
+  p.padding = '12px ' + ({s:12, m:22, l:36}[S.margin] || 22) + 'px';
+  $('#sizeVal').textContent = size + '%';
 }
 function syncSettings() {
   document.querySelectorAll('#setBody [data-v]').forEach(b => b.classList.toggle('on', String(S[b.dataset.k]) === b.dataset.v));
   document.querySelectorAll('#setBody input[data-k]').forEach(i => { i.checked = !!S[i.dataset.k]; });
-  $('#sizeVal').textContent = S.size + '%';
+  $('#sizeRange').value = S.size;
+  syncPreview(S.size);
 }
 function setSetting(k, v) {
   if (S[k] === v) return;
@@ -1528,7 +1587,13 @@ function init() {
     if (b.dataset.step) setSetting('size', clamp(S.size + (+b.dataset.step), 60, 250));
     else if (b.dataset.k) setSetting(b.dataset.k, b.dataset.v);
   };
-  $('#setBody').onchange = e => { if (e.target.dataset.k) setSetting(e.target.dataset.k, e.target.checked); };
+  $('#setBody').onchange = e => {
+    if (e.target.id === 'sizeRange') setSetting('size', +e.target.value);
+    else if (e.target.dataset.k) setSetting(e.target.dataset.k, e.target.checked);
+  };
+  // Dragging the size slider only updates the preview; the book re-lays out once on release.
+  $('#setBody').oninput = e => { if (e.target.id === 'sizeRange') syncPreview(+e.target.value); };
+  $('#setTabs').onclick = e => { const b = e.target.closest('[data-tab]'); if (b) setTab(b.dataset.tab); };
   const sl = $('#slider');
   sl.addEventListener('pointerdown', () => { Reader.dragging = true; });
   // A tap that does not move the thumb fires no change event, which left the slider frozen.
